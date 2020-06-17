@@ -19,7 +19,7 @@ function GstLaunch() {
    * @fn getPath
    * @brief Returns path to gst-launch or undefined on error
    */
-  var getPath = function() {
+  var getPath = function () {
     var detected_path = undefined;
 
     if (OS.platform() == 'win32') {
@@ -61,7 +61,8 @@ function GstLaunch() {
               (gst_launch_executable + '.exe'));
             FS.accessSync(bin, FS.F_OK);
             detected_path = bin;
-          } catch (e) { /* no-op */ }
+          } catch (e) {
+            /* no-op */ }
         }
       }
     } else if (OS.platform() == 'linux') {
@@ -75,14 +76,16 @@ function GstLaunch() {
             gst_launch_executable);
           FS.accessSync(bin, FS.F_OK);
           detected_path = bin;
-        } catch (e) { /* no-op */ }
+        } catch (e) {
+          /* no-op */ }
       }
     } else if (OS.platform() == 'darwin') {
       try {
         var bin = '/usr/local/bin/gst-launch-1.0'
         FS.accessSync(bin, FS.F_OK);
         detected_path = bin;
-      } catch (e) { /* no-op */ }
+      } catch (e) {
+        /* no-op */ }
     }
 
     return detected_path;
@@ -93,11 +96,11 @@ function GstLaunch() {
    * @brief Returns version string of GStreamer on this machine by
    * invoking the gst-launch executable or 'undefined' on failure.
    */
-  var getVersion = function() {
+  var getVersion = function () {
     var version_str = undefined;
     try {
       var gst_launch_path = getPath();
-      Assert.ok(typeof(gst_launch_path), 'string');
+      Assert.ok(typeof (gst_launch_path), 'string');
 
       var output = SpawnSync(
           gst_launch_path, [gst_launch_versionarg], {
@@ -122,7 +125,7 @@ function GstLaunch() {
    * @fn isAvailable
    * @brief Answers true if gst-launch executable is available
    */
-  var isAvailable = function() {
+  var isAvailable = function () {
     return getVersion() != undefined;
   }
 
@@ -134,12 +137,12 @@ function GstLaunch() {
    * https://gstreamer.freedesktop.org/data/doc/gstreamer/head/manual/html/chapter-programs.html
    * @usage spawnPipeline('videotestsrc ! autovideosink')
    */
-  var spawnPipeline = function(pipeline) {
-    Assert.ok(typeof(pipeline), 'string');
+  var spawnPipeline = function (pipeline) {
+    Assert.ok(typeof (pipeline), 'string');
     Assert.ok(isAvailable(), "gst-launch is not available.");
 
     var gst_launch_path = getPath();
-    Assert.ok(typeof(gst_launch_path), 'string');
+    Assert.ok(typeof (gst_launch_path), 'string');
 
     return Spawn(gst_launch_path, pipeline.split(' '));
   }
@@ -166,7 +169,7 @@ function GstLiveCamServer(config) {
     "livecam module supports Windows, Linux, and Mac OSX for broadcasting.");
 
   config = config || {};
-  Assert.ok(typeof(config), 'object');
+  Assert.ok(typeof (config), 'object');
 
   const fake = config.fake || false;
   const width = config.width || 800;
@@ -175,11 +178,11 @@ function GstLiveCamServer(config) {
   const grayscale = config.grayscale || false;
   const deviceIndex = config.deviceIndex || -1;
 
-  Assert.ok(typeof(fake), 'boolean');
-  Assert.ok(typeof(width), 'number');
-  Assert.ok(typeof(height), 'number');
-  Assert.ok(typeof(framerate), 'number');
-  Assert.ok(typeof(grayscale), 'boolean');
+  Assert.ok(typeof (fake), 'boolean');
+  Assert.ok(typeof (width), 'number');
+  Assert.ok(typeof (height), 'number');
+  Assert.ok(typeof (framerate), 'number');
+  Assert.ok(typeof (grayscale), 'boolean');
 
   var gst_multipart_boundary = '--videoboundary';
   var gst_video_src = '';
@@ -215,9 +218,9 @@ function GstLiveCamServer(config) {
    * webcam over the given TCP address and port.
    * @return A Node <child-process> of the launched pipeline
    */
-  var start = function(tcp_addr, tcp_port) {
-    Assert.ok(typeof(tcp_addr), 'string');
-    Assert.ok(typeof(tcp_port), 'number');
+  var start = function (tcp_addr, tcp_port) {
+    Assert.ok(typeof (tcp_addr), 'string');
+    Assert.ok(typeof (tcp_port), 'number');
 
     const cam_pipeline = gst_video_src + ' ! jpegenc ! multipartmux  boundary="' +
       gst_multipart_boundary + '" ! tcpserversink host=' + tcp_addr + ' port=' + tcp_port;
@@ -265,18 +268,18 @@ function SocketCamWrapper(
    * @fn wrap
    * @brief wraps a TCP server previously started by GstLiveCamServer.
    */
-  var wrap = function(gst_tcp_addr,
+  var wrap = function (gst_tcp_addr,
     gst_tcp_port,
     broadcast_tcp_addr,
     broadcast_tcp_port) {
-    Assert.ok(typeof(gst_tcp_addr), 'string');
-    Assert.ok(typeof(gst_tcp_port), 'number');
-    Assert.ok(typeof(broadcast_tcp_addr), 'string');
-    Assert.ok(typeof(broadcast_tcp_port), 'number');
+    Assert.ok(typeof (gst_tcp_addr), 'string');
+    Assert.ok(typeof (gst_tcp_port), 'number');
+    Assert.ok(typeof (broadcast_tcp_addr), 'string');
+    Assert.ok(typeof (broadcast_tcp_port), 'number');
 
     var socket = Net.Socket();
 
-    socket.connect(gst_tcp_port, gst_tcp_addr, function() {
+    socket.connect(gst_tcp_port, gst_tcp_addr, function () {
       var io = SocketIO.listen(
         Http.createServer()
         .listen(broadcast_tcp_port, broadcast_tcp_addr));
@@ -284,24 +287,32 @@ function SocketCamWrapper(
       var dicer = new Dicer({
         boundary: gst_multipart_boundary
       });
+    
+      dicer.on('error', function (e) {
+        socket.destroy(e);
+      });
 
-      dicer.on('part', function(part) {
+      dicer.on('part', function (part) {
         var frameEncoded = '';
         part.setEncoding('base64');
 
-        part.on('data', function(data) {
+        part.on('error', function (e) {
+          console.log("Error : " + e);
+          socket.destroy(e);
+        });
+        part.on('data', function (data) {
           frameEncoded += data;
         });
-        part.on('end', function() {
+        part.on('end', function () {
           io.sockets.emit('image', frameEncoded);
         });
       });
 
-      dicer.on('finish', function() {
+      dicer.on('finish', function () {
         console.log('Dicer finished: ' + broadcast_tcp_addr + ':' + broadcast_tcp_port);
       });
 
-      socket.on('close', function() {
+      socket.on('close', function () {
         console.log('Socket closed: ' + broadcast_tcp_addr + ':' + broadcast_tcp_port);
       });
 
@@ -322,7 +333,7 @@ function LiveCamUI() {
 
   const Http = require('http');
   const Assert = require('assert');
-  const template = (function() {
+  const template = (function () {
     /*
     	<!doctype html>
     	<html lang="en">
@@ -353,14 +364,14 @@ function LiveCamUI() {
 
   var server = undefined;
 
-  var serve = function(ui_addr, ui_port, webcam_addr, webcam_port) {
-    Assert.ok(typeof(ui_addr), 'object');
-    Assert.ok(typeof(ui_port), 'number');
-    Assert.ok(typeof(webcam_addr), 'object');
-    Assert.ok(typeof(webcam_port), 'number');
+  var serve = function (ui_addr, ui_port, webcam_addr, webcam_port) {
+    Assert.ok(typeof (ui_addr), 'object');
+    Assert.ok(typeof (ui_port), 'number');
+    Assert.ok(typeof (webcam_addr), 'object');
+    Assert.ok(typeof (webcam_port), 'number');
 
     close();
-    server = Http.createServer(function(request, response) {
+    server = Http.createServer(function (request, response) {
       response.writeHead(200, {
         "Content-Type": "text/html"
       });
@@ -374,7 +385,7 @@ function LiveCamUI() {
     console.log('Open http://' + ui_addr + ':' + ui_port + '/ in your browser!');
   }
 
-  var close = function() {
+  var close = function () {
     if (server) {
       server.close();
       server = undefined;
@@ -412,7 +423,7 @@ function LiveCam(config) {
   const Assert = require('assert');
 
   config = config || {};
-  Assert.ok(typeof(config), 'object');
+  Assert.ok(typeof (config), 'object');
 
   const gst_tcp_addr = config.gst_addr || "127.0.0.1";
   const gst_tcp_port = config.gst_port || 10000;
@@ -423,14 +434,14 @@ function LiveCam(config) {
   const start = config.start;
   const webcam = config.webcam || {};
 
-  if (start) Assert.ok(typeof(start), 'function');
-  if (broadcast_port) Assert.ok(typeof(broadcast_port), 'number');
-  if (broadcast_addr) Assert.ok(typeof(broadcast_addr), 'string');
-  if (ui_port) Assert.ok(typeof(ui_port), 'number');
-  if (ui_addr) Assert.ok(typeof(ui_addr), 'string');
-  if (gst_tcp_port) Assert.ok(typeof(gst_tcp_port), 'number');
-  if (gst_tcp_addr) Assert.ok(typeof(gst_tcp_addr), 'string');
-  if (webcam) Assert.ok(typeof(webcam), 'object');
+  if (start) Assert.ok(typeof (start), 'function');
+  if (broadcast_port) Assert.ok(typeof (broadcast_port), 'number');
+  if (broadcast_addr) Assert.ok(typeof (broadcast_addr), 'string');
+  if (ui_port) Assert.ok(typeof (ui_port), 'number');
+  if (ui_addr) Assert.ok(typeof (ui_addr), 'string');
+  if (gst_tcp_port) Assert.ok(typeof (gst_tcp_port), 'number');
+  if (gst_tcp_addr) Assert.ok(typeof (gst_tcp_addr), 'string');
+  if (webcam) Assert.ok(typeof (webcam), 'object');
 
   if (!(new GstLaunch()).isAvailable()) {
     console.log("==================================================");
@@ -451,13 +462,13 @@ function LiveCam(config) {
     'gst_tcp_port': gst_tcp_port
   });
 
-  var broadcast = function() {
+  var broadcast = function () {
     var gst_cam_ui = new LiveCamUI();
     var gst_cam_wrap = new SocketCamWrapper();
     var gst_cam_server = new GstLiveCamServer(webcam);
     var gst_cam_process = gst_cam_server.start(gst_tcp_addr, gst_tcp_port);
 
-    gst_cam_process.stdout.on('data', function(data) {
+    gst_cam_process.stdout.on('data', function (data) {
       console.log(data.toString());
       // This catches GStreamer when pipeline goes into PLAYING state
       if (data.toString().includes('Setting pipeline to PLAYING') > 0) {
@@ -469,15 +480,15 @@ function LiveCam(config) {
       }
     });
 
-    gst_cam_process.stderr.on('data', function(data) {
+    gst_cam_process.stderr.on('data', function (data) {
       console.log(data.toString());
       gst_cam_ui.close();
     });
-    gst_cam_process.on('error', function(err) {
+    gst_cam_process.on('error', function (err) {
       console.log("Webcam server error: " + err);
       gst_cam_ui.close();
     });
-    gst_cam_process.on('exit', function(code) {
+    gst_cam_process.on('exit', function (code) {
       console.log("Webcam server exited: " + code);
       gst_cam_ui.close();
     });
