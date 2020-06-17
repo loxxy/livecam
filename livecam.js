@@ -62,7 +62,8 @@ function GstLaunch() {
             FS.accessSync(bin, FS.F_OK);
             detected_path = bin;
           } catch (e) {
-            /* no-op */ }
+            /* no-op */
+          }
         }
       }
     } else if (OS.platform() == 'linux') {
@@ -77,7 +78,8 @@ function GstLaunch() {
           FS.accessSync(bin, FS.F_OK);
           detected_path = bin;
         } catch (e) {
-          /* no-op */ }
+          /* no-op */
+        }
       }
     } else if (OS.platform() == 'darwin') {
       try {
@@ -85,7 +87,8 @@ function GstLaunch() {
         FS.accessSync(bin, FS.F_OK);
         detected_path = bin;
       } catch (e) {
-        /* no-op */ }
+        /* no-op */
+      }
     }
 
     return detected_path;
@@ -287,7 +290,7 @@ function SocketCamWrapper(
       var dicer = new Dicer({
         boundary: gst_multipart_boundary
       });
-    
+
       dicer.on('error', function (e) {
         socket.destroy(e);
       });
@@ -432,6 +435,7 @@ function LiveCam(config) {
   const broadcast_addr = config.broadcast_addr || "127.0.0.1";
   const broadcast_port = config.broadcast_port || 12000;
   const start = config.start;
+  const exit = config.exit || default_exit;
   const webcam = config.webcam || {};
 
   if (start) Assert.ok(typeof (start), 'function');
@@ -462,6 +466,10 @@ function LiveCam(config) {
     'gst_tcp_port': gst_tcp_port
   });
 
+  const default_exit = function (code = 0, error = []) {
+
+  }
+
   var broadcast = function () {
     var gst_cam_ui = new LiveCamUI();
     var gst_cam_wrap = new SocketCamWrapper();
@@ -487,10 +495,12 @@ function LiveCam(config) {
     gst_cam_process.on('error', function (err) {
       console.log("Webcam server error: " + err);
       gst_cam_ui.close();
+      exit(0, err);      
     });
     gst_cam_process.on('exit', function (code) {
       console.log("Webcam server exited: " + code);
       gst_cam_ui.close();
+      exit(code);      
     });
   }
 
