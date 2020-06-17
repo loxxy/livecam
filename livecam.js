@@ -440,7 +440,7 @@ function LiveCam(config) {
   const broadcast_addr = config.broadcast_addr || "127.0.0.1";
   const broadcast_port = config.broadcast_port || 12000;
   const start = config.start;
-  const exit = config.exit || default_exit;
+  const exit = config.exit || function (code = 0, error = []) {};
   const webcam = config.webcam || {};
 
   if (start) Assert.ok(typeof (start), 'function');
@@ -470,10 +470,6 @@ function LiveCam(config) {
     'gst_tcp_addr': gst_tcp_addr,
     'gst_tcp_port': gst_tcp_port
   });
-
-  const default_exit = function (code = 0, error = []) {
-
-  }
 
   var broadcast = function () {
     var gst_cam_ui = new LiveCamUI();
@@ -505,7 +501,7 @@ function LiveCam(config) {
     gst_cam_process.on('exit', function (code) {
       console.log("Webcam server exited: " + code);
       gst_cam_ui.close();
-      exit(code);
+      exit(code, '');
     });
   }
 
