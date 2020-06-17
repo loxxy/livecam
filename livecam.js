@@ -282,17 +282,22 @@ function SocketCamWrapper(
 
     var socket = Net.Socket();
 
+    socket.on('error', function (e) {
+      console.log("Socket Error : " + e);
+      server.close();
+    });
+
     socket.connect(gst_tcp_port, gst_tcp_addr, function () {
-      var io = SocketIO.listen(
-        Http.createServer()
-        .listen(broadcast_tcp_port, broadcast_tcp_addr));
+      var server = Http.createServer().listen(broadcast_tcp_port, broadcast_tcp_addr);
+      var io = SocketIO.listen(server);
 
       var dicer = new Dicer({
         boundary: gst_multipart_boundary
       });
 
       dicer.on('error', function (e) {
-        socket.destroy(e);
+        console.log("Dicer Error : " + e);
+        server.close()
       });
 
       dicer.on('part', function (part) {
@@ -300,8 +305,8 @@ function SocketCamWrapper(
         part.setEncoding('base64');
 
         part.on('error', function (e) {
-          console.log("Error : " + e);
-          socket.destroy(e);
+          console.log("Part Error : " + e);
+          server.close();
         });
         part.on('data', function (data) {
           frameEncoded += data;
@@ -495,12 +500,12 @@ function LiveCam(config) {
     gst_cam_process.on('error', function (err) {
       console.log("Webcam server error: " + err);
       gst_cam_ui.close();
-      exit(0, err);      
+      exit(0, err);
     });
     gst_cam_process.on('exit', function (code) {
       console.log("Webcam server exited: " + code);
       gst_cam_ui.close();
-      exit(code);      
+      exit(code);
     });
   }
 
